@@ -1,0 +1,9 @@
+{
+    "name": "lavva-js-sdk",
+    "version": "1.0.0",
+    "peerDependencies": {},
+    "dependencies": {
+        "reconnecting-websocket": "^4.4.0",
+        "tslib": "^1.10.0"
+    }
+}
