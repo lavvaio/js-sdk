@@ -8,5 +8,9 @@
         "rxjs": "^6.6.3",
         "tslib": "^1.10.0"
     },
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "bundleDependencies": [
+        "reconnecting-websocket",
+        "rxjs"
+    ]
 }
