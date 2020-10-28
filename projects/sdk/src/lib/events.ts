@@ -5,49 +5,21 @@ export interface XEvent {
 }
 
 export class MessageXEvent implements XEvent {
-
-    constructor( public event: MessageEvent ) {
-        //
-    }
-
-    getType(): string {
-        return 'message';
-    }
-
+    constructor( public event: MessageEvent ) {}
+    getType: () => 'message';
 }
 
 export class OpenXEvent implements XEvent {
-
-    constructor( public event: Event ) {
-        //
-    }
-
-    getType(): string {
-        return 'open';
-    }
-
+    constructor( public event: Event ) {}
+    getType: () => 'open';
 }
 
 export class CloseXEvent implements XEvent {
-
-    constructor( public event: CloseEvent ) {
-        //
-    }
-
-    getType(): string {
-        return 'close';
-    }
-
+    constructor( public event: CloseEvent ) {}
+    getType: () => 'close';
 }
 
 export class ErrorXEvent implements XEvent {
-
-    constructor( public event: ErrorEvent ) {
-        //
-    }
-
-    getType(): string {
-        return 'error';
-    }
-
+    constructor( public event: ErrorEvent ) {}
+    getType: () => 'error';
 }

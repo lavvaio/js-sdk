@@ -1,53 +1,21 @@
+import { ClientMessageDataType, WebsocketMessage, WebsocketMessageClientConnectedData } from './message';
 import ReconnectingWebSocket, { Event, CloseEvent, ErrorEvent } from 'reconnecting-websocket';
 import { Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { CloseXEvent, ErrorXEvent, MessageXEvent, OpenXEvent, XEvent } from './events';
-
-export interface WebsocketConnectionOptions {
-    host: string;
-    clientId?: string;
-    channels: string[];
-    secure?: boolean;
-    format?: string;
-}
-
-export enum ClientMessageDataType {
-    CLIENT_CONNECTED = 0,
-    CLIENT_DISCONNECTED = 1,
-    CLIENT_SUBSCRIBE = 2,
-    CLIENT_SUBSCRIBED = 3,
-    CLIENT_UNSUBSCRIBE = 4,
-    CLIENT_UNSUBSCRIBED = 5,
-    DATA = 6,
-}
-
-export interface WebsocketMessage<T = any> {
-    hid?: string;
-    pid?: string;
-    Type: ClientMessageDataType;
-    Channel: string;
-    Key: string;
-    Tag: string;
-    Value: T;
-    Timestamp: number;
-}
-
-export interface WebsocketMessageClientConnectedData {
-    ClientID: string;
-    Format: string;
-    Transport: string;
-}
+import { WebsocketConnectionOptions } from './connection-options';
 
 export class WebsocketConnection {
 
     private url: string;
-    private clientId: string;
     private format: string;
-    private transport;
+    private clientId: string;
+    private transport: string;
+    private websocketConnection: ReconnectingWebSocket;
+
     private connected = false;
     private channels = new Set<string>();
     private events = new Subject<XEvent>();
-    private websocketConnection: ReconnectingWebSocket;
 
     constructor(options: WebsocketConnectionOptions) {
         if (!options.host) {
@@ -62,22 +30,32 @@ export class WebsocketConnection {
             throw new Error('channels are empty');
         }
 
-        const protocol = options.secure ? 'wss://' : 'ws://';
+        // use unsecure protocol only if specified and equal to false
+        const protocol = (options?.secure === false) ? 'ws://' : 'wss://';
 
+        // remove duplicates
         options.channels.forEach((channel) => this.channels.add(channel));
 
-        let url = `${protocol}${options.host}/v1/ws?=channels` + options.channels.join(',');
+        // construct url
+        let url = `${protocol}${options.host}/v1/ws?=channels` + Array.from(this.channels).join(',');
 
+        // check if there is a client id specified
+        // this might orevent you to connect if the client id already in the system
         if (options.clientId) {
             this.clientId = options.clientId;
             url += `&client_id=${options.clientId}`;
         }
 
-        if (options.format) {
-            this.format = options.format;
-            url += `&format=${options.format}`;
+        // detect format
+        if (options?.format !== 'text') {
+            options.format = 'binary';
         }
 
+        // set format
+        this.format = options.format;
+        url += `&format=${options.format}`;
+
+        // store final url
         this.url = url;
     }
 
@@ -110,8 +88,8 @@ export class WebsocketConnection {
 
             if (event.data.Type === ClientMessageDataType.CLIENT_CONNECTED) {
                 const message = event.data as WebsocketMessage<WebsocketMessageClientConnectedData>;
-                this.clientId = message.Value.ClientID;
                 this.format = message.Value.Format;
+                this.clientId = message.Value.ClientID;
                 this.transport = message.Value.Transport;
             }
 
