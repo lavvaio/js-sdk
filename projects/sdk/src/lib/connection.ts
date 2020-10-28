@@ -26,7 +26,7 @@ export class WebsocketConnection {
             throw new Error('channels have not been specified');
         }
 
-        if (options.channels.length) {
+        if (options.channels.length === 0) {
             throw new Error('channels are empty');
         }
 

@@ -1,5 +1,5 @@
-prod:
-	ng build sdk --prod
+pack:
+	ng build sdk --prod && cd dist/sdk && npm pack
 
 test:
 	ng test sdk
