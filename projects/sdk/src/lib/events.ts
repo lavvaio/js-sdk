@@ -1,25 +1,23 @@
-import { Event, CloseEvent, ErrorEvent, /* MessageEvent */ } from 'reconnecting-websocket';
-
-export interface XEvent {
+export interface LVEvent {
     getType(): string;
 }
 
-export class MessageXEvent implements XEvent {
-    constructor( public event: MessageEvent ) {}
+export class LVMessageEvent<T = any> implements LVEvent {
+    constructor( public event: MessageEvent, public data: T ) {}
     getType: () => 'message';
 }
 
-export class OpenXEvent implements XEvent {
+export class LVOpenEvent implements LVEvent {
     constructor( public event: Event ) {}
     getType: () => 'open';
 }
 
-export class CloseXEvent implements XEvent {
+export class LVCloseEvent implements LVEvent {
     constructor( public event: CloseEvent ) {}
     getType: () => 'close';
 }
 
-export class ErrorXEvent implements XEvent {
+export class LVErrorEvent implements LVEvent {
     constructor( public event: ErrorEvent ) {}
     getType: () => 'error';
 }

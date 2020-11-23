@@ -1,9 +1,9 @@
-import { ClientMessageDataType, WebsocketMessage, WebsocketMessageClientConnectedData } from './message';
-import ReconnectingWebSocket, { Event, CloseEvent, ErrorEvent } from 'reconnecting-websocket';
+import { ClientMessageDataType, WebsocketMessage } from './message';
 import { Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import { CloseXEvent, ErrorXEvent, MessageXEvent, OpenXEvent, XEvent } from './events';
+
 import { WebsocketConnectionOptions } from './connection-options';
+import { LVCloseEvent, LVErrorEvent, LVEvent, LVMessageEvent, LVOpenEvent } from './events';
 
 export class WebsocketConnection {
 
@@ -11,11 +11,11 @@ export class WebsocketConnection {
     private format: string;
     private clientId: string;
     private transport: string;
-    private websocketConnection: ReconnectingWebSocket;
+    private websocketConnection: WebSocket;
 
     private connected = false;
     private channels = new Set<string>();
-    private events = new Subject<XEvent>();
+    private events = new Subject<LVEvent>();
 
     constructor(options: WebsocketConnectionOptions) {
         if (!options.host) {
@@ -30,6 +30,10 @@ export class WebsocketConnection {
             throw new Error('channels are empty');
         }
 
+        if (!options.apiKey || options.apiKey.length === 0) {
+            throw new Error('APIKey is required');
+        }
+
         // use unsecure protocol only if specified and equal to false
         const protocol = (options?.secure === false) ? 'ws://' : 'wss://';
 
@@ -37,13 +41,15 @@ export class WebsocketConnection {
         options.channels.forEach((channel) => this.channels.add(channel));
 
         // construct url
-        let url = `${protocol}${options.host}/v1/ws?=channels` + Array.from(this.channels).join(',');
+        let url = `${protocol}${options.host}/v1/ws?channels=` + Array.from(this.channels).map(ch => {
+            return encodeURIComponent(ch);
+        }).join(',');
 
         // check if there is a client id specified
         // this might orevent you to connect if the client id already in the system
         if (options.clientId) {
             this.clientId = options.clientId;
-            url += `&client_id=${options.clientId}`;
+            url += `&client_id=${encodeURIComponent(options.clientId)}`;
         }
 
         // detect format
@@ -51,20 +57,23 @@ export class WebsocketConnection {
             options.format = 'binary';
         }
 
+        // set api key
+        url += `&apiKey=${encodeURIComponent(options.apiKey)}`;
+
         // set format
         this.format = options.format;
-        url += `&format=${options.format}`;
+        url += `&format=${encodeURIComponent(options.format)}`;
 
         // store final url
         this.url = url;
     }
 
     connect(): (code?: number, reason?: string) => void {
-        this.websocketConnection = new ReconnectingWebSocket(this.url);
-        this.websocketConnection.addEventListener('error', this.onError);
-        this.websocketConnection.addEventListener('close', this.onClose);
-        this.websocketConnection.addEventListener('message', this.onMessage);
-        this.websocketConnection.addEventListener('open', this.onOpen);
+        this.websocketConnection = new WebSocket(this.url);
+        this.websocketConnection.addEventListener('error', this.onError.bind(this));
+        this.websocketConnection.addEventListener('close', this.onClose.bind(this));
+        this.websocketConnection.addEventListener('message', this.onMessage.bind(this));
+        this.websocketConnection.addEventListener('open', this.onOpen.bind(this));
         return (code?: number, reason?: string) => {
             this.websocketConnection.close(code, reason);
             this.websocketConnection.removeEventListener('error', this.onError);
@@ -75,39 +84,55 @@ export class WebsocketConnection {
     }
 
     protected onError(event: ErrorEvent) {
-        this.events.next(new ErrorXEvent(event));
+        this.events.next(new LVErrorEvent(event));
     }
 
     protected onClose(event: CloseEvent) {
         this.connected = true;
-        this.events.next(new CloseXEvent(event));
+        this.events.next(new LVCloseEvent(event));
     }
 
-    protected onMessage(event: MessageEvent) {
-        if (this.channels.has(event.data.Channel)) {
+    protected async onMessage(event: MessageEvent) {
+        const data = await this.getData(event);
 
-            if (event.data.Type === ClientMessageDataType.CLIENT_CONNECTED) {
-                const message = event.data as WebsocketMessage<WebsocketMessageClientConnectedData>;
-                this.format = message.Value.Format;
-                this.clientId = message.Value.ClientID;
-                this.transport = message.Value.Transport;
-            }
-
-            this.events.next(new MessageXEvent(event));
+        if (!this.channels.has(data.channel)) {
+            return;
         }
+
+        if (data.type === ClientMessageDataType.CLIENT_CONNECTED) {
+            // this.format = data.Value.Format;
+            this.clientId = data.value.client_id;
+            // this.transport = data.Value.Transport;
+        }
+
+        this.events.next(new LVMessageEvent(event, data));
     }
 
     protected onOpen(event: Event) {
         this.connected = true;
-        this.events.next(new OpenXEvent(event));
+        this.events.next(new LVOpenEvent(event));
+    }
+
+    private getData(xevent: MessageEvent): Promise<any> {
+        return new Promise((resolve) => {
+            if (xevent.data instanceof Blob) {
+                const reader = new FileReader();
+                reader.onload = () => resolve(JSON.parse(reader.result as string));
+                reader.readAsText(xevent.data);
+            } else {
+                resolve(JSON.parse(xevent.data));
+            }
+        });
     }
 
     channelStream<T = any>(channel: string): Observable<WebsocketMessage<T>> {
         return this.events.asObservable().pipe(
-            filter(xevent => xevent instanceof MessageXEvent),
-            map(xevent => xevent as MessageXEvent),
-            filter(xevent => xevent.event.data.Channel === channel),
-            map(xevent => xevent.event.data as WebsocketMessage<T>),
+            filter(xevent => xevent instanceof LVMessageEvent),
+            map(xevent => xevent as LVMessageEvent),
+            // tap(xevent => console.log('>> post event', xevent, channel)),
+            filter(xevent => xevent.data.channel === channel),
+            // tap(xevent => console.log('>> post event', xevent, channel)),
+            map(xevent => xevent.data as WebsocketMessage<T>),
         );
     }
 

@@ -5,14 +5,13 @@
     "description": "",
     "repository": "https://github.com/lavvaio/js-sdk",
     "dependencies": {
-        "reconnecting-websocket": "^4.4.0",
-        "rxjs": "^6.6.3",
-        "tslib": "^1.10.0"
+        "tslib": "^2.0.0"
     },
-    "license": "Apache-2.0",
-    "bundleDependencies": [
-        "reconnecting-websocket",
-        "rxjs",
-        "tslib"
-    ]
+    "peerDependencies": {
+        "rxjs": "^6.6.3"
+    },
+    "optionalDependencies": {
+        "reconnecting-websocket": "^4.4.0"
+    },
+    "license": "Apache-2.0"
 }

@@ -11,16 +11,16 @@ export enum ClientMessageDataType {
 export interface WebsocketMessage<T = any> {
     hid?: string;
     pid?: string;
-    Type: ClientMessageDataType;
-    Channel: string;
-    Key: string;
-    Tag: string;
-    Value: T;
-    Timestamp: number;
+    type: ClientMessageDataType;
+    channel: string;
+    key: string;
+    tag: string;
+    value: T;
+    timestamp: number;
 }
 
 export interface WebsocketMessageClientConnectedData {
-    ClientID: string;
-    Format: string;
-    Transport: string;
+    client_id: string;
+    format: string;
+    transport: string;
 }
