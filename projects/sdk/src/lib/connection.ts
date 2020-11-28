@@ -4,7 +4,6 @@ import { filter, map } from 'rxjs/operators';
 
 import { WebsocketConnectionOptions } from './connection-options';
 import { LVCloseEvent, LVErrorEvent, LVEvent, LVMessageEvent, LVOpenEvent } from './events';
-
 export class WebsocketConnection {
 
     private url: string;
@@ -125,8 +124,12 @@ export class WebsocketConnection {
         });
     }
 
+    eventStream(): Observable<LVEvent> {
+        return this.events.asObservable();
+    }
+
     channelStream<T = any>(channel: string): Observable<WebsocketMessage<T>> {
-        return this.events.asObservable().pipe(
+        return this.eventStream().pipe(
             filter(xevent => xevent instanceof LVMessageEvent),
             map(xevent => xevent as LVMessageEvent),
             // tap(xevent => console.log('>> post event', xevent, channel)),
