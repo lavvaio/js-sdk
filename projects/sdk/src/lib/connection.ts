@@ -3,7 +3,7 @@ import { Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 
 import { WebsocketConnectionOptions } from './connection-options';
-import { LVCloseEvent, LVErrorEvent, LVEvent, LVMessageEvent, LVOpenEvent } from './events';
+import { LVCloseEvent, LVErrorEvent, LVEvent, LVEventMessageType, LVMessageEvent, LVOpenEvent } from './events';
 export class WebsocketConnection {
 
     private url: string;
@@ -69,29 +69,29 @@ export class WebsocketConnection {
 
     connect(): (code?: number, reason?: string) => void {
         this.websocketConnection = new WebSocket(this.url);
-        this.websocketConnection.addEventListener('error', this.onError.bind(this));
-        this.websocketConnection.addEventListener('close', this.onClose.bind(this));
-        this.websocketConnection.addEventListener('message', this.onMessage.bind(this));
-        this.websocketConnection.addEventListener('open', this.onOpen.bind(this));
+        this.websocketConnection.addEventListener('open', this.handleOpen.bind(this));
+        this.websocketConnection.addEventListener('error', this.handleError.bind(this));
+        this.websocketConnection.addEventListener('close', this.handleClose.bind(this));
+        this.websocketConnection.addEventListener('message', this.handleMessage.bind(this));
         return (code?: number, reason?: string) => {
             this.websocketConnection.close(code, reason);
-            this.websocketConnection.removeEventListener('error', this.onError);
-            this.websocketConnection.removeEventListener('close', this.onClose);
-            this.websocketConnection.removeEventListener('message', this.onMessage);
-            this.websocketConnection.removeEventListener('open', this.onOpen);
+            this.websocketConnection.removeEventListener('open', this.handleOpen);
+            this.websocketConnection.removeEventListener('error', this.handleError);
+            this.websocketConnection.removeEventListener('close', this.handleClose);
+            this.websocketConnection.removeEventListener('message', this.handleMessage);
         };
     }
 
-    protected onError(event: ErrorEvent) {
+    protected handleError(event: ErrorEvent) {
         this.events.next(new LVErrorEvent(event));
     }
 
-    protected onClose(event: CloseEvent) {
+    protected handleClose(event: CloseEvent) {
         this.connected = true;
         this.events.next(new LVCloseEvent(event));
     }
 
-    protected async onMessage(event: MessageEvent) {
+    protected async handleMessage(event: MessageEvent) {
         const data = await this.getData(event);
 
         if (!this.channels.has(data.channel)) {
@@ -107,7 +107,7 @@ export class WebsocketConnection {
         this.events.next(new LVMessageEvent(event, data));
     }
 
-    protected onOpen(event: Event) {
+    protected handleOpen(event: Event) {
         this.connected = true;
         this.events.next(new LVOpenEvent(event));
     }
@@ -124,16 +124,17 @@ export class WebsocketConnection {
         });
     }
 
-    eventStream(): Observable<LVEvent> {
-        return this.events.asObservable();
+    eventStream(...events: LVEventMessageType[]): Observable<LVEvent> {
+        return this.events.asObservable().pipe(
+            filter(xevent => events && events.length ? events.includes(xevent.getType()) : true)
+        );
     }
 
-    channelStream<T = any>(channel: string): Observable<WebsocketMessage<T>> {
-        return this.eventStream().pipe(
-            filter(xevent => xevent instanceof LVMessageEvent),
+    channelStream<T = any>(...channels: string[]): Observable<WebsocketMessage<T>> {
+        return this.eventStream(LVMessageEvent.TYPE).pipe(
             map(xevent => xevent as LVMessageEvent),
             // tap(xevent => console.log('>> post event', xevent, channel)),
-            filter(xevent => xevent.data.channel === channel),
+            filter(xevent => channels.includes(xevent.data.channel)),
             // tap(xevent => console.log('>> post event', xevent, channel)),
             map(xevent => xevent.data as WebsocketMessage<T>),
         );
