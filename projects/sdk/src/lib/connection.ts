@@ -124,18 +124,16 @@ export class WebsocketConnection {
         });
     }
 
-    eventStream(...events: LVEventMessageType[]): Observable<LVEvent> {
+    eventStream<T extends LVEvent>(...events: LVEventMessageType[]): Observable<T> {
         return this.events.asObservable().pipe(
-            filter(xevent => events && events.length ? events.includes(xevent.getType()) : true)
+            filter(xevent => events && events.length ? events.includes(xevent.getType()) : true),
+            map(xevent => xevent as T),
         );
     }
 
     channelStream<T = any>(...channels: string[]): Observable<WebsocketMessage<T>> {
-        return this.eventStream(LVMessageEvent.TYPE).pipe(
-            map(xevent => xevent as LVMessageEvent),
-            // tap(xevent => console.log('>> post event', xevent, channel)),
+        return this.eventStream<LVMessageEvent>(LVMessageEvent.TYPE).pipe(
             filter(xevent => channels.includes(xevent.data.channel)),
-            // tap(xevent => console.log('>> post event', xevent, channel)),
             map(xevent => xevent.data as WebsocketMessage<T>),
         );
     }
