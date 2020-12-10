@@ -5,4 +5,6 @@ export interface WebsocketConnectionOptions {
     apiKey: string;
     secure?: boolean;
     format?: 'text' | 'binary';
+    interval?: number;
+    tries?: number;
 }

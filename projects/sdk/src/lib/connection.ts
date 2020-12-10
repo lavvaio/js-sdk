@@ -2,6 +2,10 @@ import { ClientMessageDataType, WebsocketMessage } from './message';
 import { Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 
+// https://gearheart.io/blog/auto-websocket-reconnection-with-rxjs-with-example/
+// https://github.com/ReactiveX/rxjs/blob/6.5.5/src/internal/observable/dom/WebSocketSubject.ts#L150-L387
+// import { WebSocketSubject, WebSocketSubjectConfig } from 'rxjs/observable/dom/WebSocketSubject';
+
 import { WebsocketConnectionOptions } from './connection-options';
 import { LVCloseEvent, LVErrorEvent, LVEvent, LVEventMessageType, LVMessageEvent, LVOpenEvent } from './events';
 export class WebsocketConnection {
