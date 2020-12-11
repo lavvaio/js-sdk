@@ -2,6 +2,7 @@
  * Public API Surface of SDK
  */
 
+export * from './lib/retry';
 export * from './lib/logger';
 export * from './lib/events';
 export * from './lib/message';

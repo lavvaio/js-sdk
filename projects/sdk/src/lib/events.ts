@@ -12,7 +12,7 @@ export class LVMessageEvent<T = any> extends LVEvent {
 
     static TYPE: LVEventMessageType = 'message';
 
-    constructor( public event: MessageEvent, public data: T ) {
+    constructor( public data: T ) {
         super();
     }
 

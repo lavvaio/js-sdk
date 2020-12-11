@@ -1,5 +1,6 @@
 export interface WebsocketConnectionOptions {
     host: string;
+    path?: string;
     clientId?: string;
     channels: string[];
     apiKey: string;
