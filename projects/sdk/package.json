@@ -10,8 +10,5 @@
     "peerDependencies": {
         "rxjs": "^6.6.3"
     },
-    "optionalDependencies": {
-        "reconnecting-websocket": "^4.4.0"
-    },
     "license": "Apache-2.0"
 }
