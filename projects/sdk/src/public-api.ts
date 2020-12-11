@@ -2,9 +2,9 @@
  * Public API Surface of SDK
  */
 
-export * from './lib/retry';
-export * from './lib/logger';
-export * from './lib/events';
-export * from './lib/message';
-export * from './lib/connection';
-export * from './lib/connection-options';
+export * from './api/retry';
+export * from './api/logger';
+export * from './api/events';
+export * from './api/message';
+export * from './api/connection';
+export * from './api/connection-options';

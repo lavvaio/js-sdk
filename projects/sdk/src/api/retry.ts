@@ -12,8 +12,6 @@ export const genericRetryStrategy = ({
         mergeMap((error, i) => {
             const retryAttempt = i + 1;
 
-            console.log('retry', retryAttempt);
-
             if (retryAttempt > maxRetryAttempts) {
                 return throwError(error);
             }

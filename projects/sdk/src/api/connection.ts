@@ -11,6 +11,7 @@ import { webSocket } from 'rxjs/webSocket';
 import { WebsocketConnectionOptions } from './connection-options';
 import { LVCloseEvent, LVErrorEvent, LVEvent, LVEventMessageType, LVMessageEvent, LVOpenEvent } from './events';
 import { genericRetryStrategy } from './retry';
+
 export class WebsocketConnection {
 
     private host: string;

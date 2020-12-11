@@ -6,7 +6,7 @@ prod:
 pack: prod
 
 test:
-	ng test sdk
+	ng test sdk --no-watch --no-progress --browsers=ChromeHeadlessCI --code-coverage
 
 publish: prod
 	cd dist/sdk && npm publish
