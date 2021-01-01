@@ -135,23 +135,6 @@ export class WebsocketConnection {
         });
     }
 
-    private getData(data: any): Promise<any> {
-        return new Promise((resolve) => {
-            if (data instanceof Blob) {
-                const reader = new FileReader();
-                reader.onload = () => resolve(JSON.parse(reader.result as string));
-                reader.readAsText(data);
-            } else {
-                resolve(JSON.parse(data));
-            }
-        });
-    }
-
-    private async deserialize(data: any) {
-        const response = await this.getData(data);
-        return response;
-    }
-
     eventStream<T extends LVEvent>(...events: LVEventMessageType[]): Observable<T> {
         return this.events.asObservable().pipe(
             filter(xevent => events && events.length ? events.includes(xevent.getType()) : true),
