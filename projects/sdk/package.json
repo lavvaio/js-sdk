@@ -5,7 +5,7 @@
     "description": "",
     "repository": "https://github.com/lavvaio/js-sdk",
     "dependencies": {
-        "tslib": "^2.0.0"
+        "tslib": "^2.0.3"
     },
     "peerDependencies": {
         "rxjs": "^6.6.3"
