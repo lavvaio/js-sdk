@@ -18,6 +18,7 @@ export class WebsocketConnection {
     private path: string;
     private apiKey: string;
     private secure: boolean;
+    private userId: string;
     private clientId: string;
     private format: 'text' | 'binary';
 
@@ -60,7 +61,7 @@ export class WebsocketConnection {
         // store client id
         // check if there is a client id specified
         // this might prevent you to connect if the client id already in the system
-        this.clientId = !!options?.clientId ? options.clientId : undefined;
+        this.userId = options?.user_id || '';
 
         // remove duplicates
         options.channels.forEach((channel) => this.channels.add(channel));
@@ -75,8 +76,8 @@ export class WebsocketConnection {
             return encodeURIComponent(ch);
         }).join(',');
 
-        if (!!this.clientId) {
-            url += `&client_id=${encodeURIComponent(this.clientId)}`;
+        if (this.userId !== '') {
+            url += `&user_id=${encodeURIComponent(this.userId)}`;
         }
 
         // set api key
@@ -124,9 +125,7 @@ export class WebsocketConnection {
             retryWhen(genericRetryStrategy({ maxRetryAttempts, retryTimeout })),
         ).subscribe(data => {
             if (data.type === ClientMessageDataType.CLIENT_CONNECTED) {
-                if (!this.clientId) {
-                    this.clientId = data.value.client_id;
-                }
+                this.clientId = data.value.client_id;
             }
 
             this.events.next(new LVMessageEvent(data));
@@ -147,6 +146,10 @@ export class WebsocketConnection {
             filter(xevent => channels.includes(xevent.data.channel)),
             map(xevent => xevent.data as WebsocketMessage<T>),
         );
+    }
+
+    getUserId() {
+        return this.userId;
     }
 
     getClientId() {
