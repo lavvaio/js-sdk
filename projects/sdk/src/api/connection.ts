@@ -50,7 +50,17 @@ export class WebsocketConnection {
         this.apiKey = options.apiKey;
 
         // store host
-        this.host = options.host;
+        if (options.host.startsWith('ws://')) {
+            this.host = options.host.substring(5);
+        } else if (options.host.startsWith('wss://')) {
+            this.host = options.host.substring(6);
+        } else if (options.host.startsWith('http://')) {
+            this.host = options.host.substring(7);
+        } else if (options.host.startsWith('https://')) {
+            this.host = options.host.substring(8);
+        } else {
+            this.host = options.host;
+        }
 
         // store path
         this.path = options.hasOwnProperty('path') ? options.path : '/v1/ws';
@@ -60,7 +70,6 @@ export class WebsocketConnection {
 
         // store client id
         // check if there is a client id specified
-        // this might prevent you to connect if the client id already in the system
         this.userId = options?.user_id || '';
 
         // remove duplicates
@@ -69,7 +78,7 @@ export class WebsocketConnection {
 
     private getURL() {
         // use unsecure protocol only if specified and equal to false
-        const protocol = this.secure ? 'ws://' : 'wss://';
+        const protocol = this.secure ? 'wss://' : 'ws://';
 
         // construct url
         let url = `${protocol}${this.host}${this.path}?channels=` + Array.from(this.channels).map(ch => {
@@ -90,21 +99,7 @@ export class WebsocketConnection {
     }
 
     connect(maxRetryAttempts = 10, retryTimeout = 1000): Subscription {
-        /*
-        this.websocketConnection = new WebSocket(this.getURL());
-        this.websocketConnection.addEventListener('open', this.handleOpen.bind(this));
-        this.websocketConnection.addEventListener('error', this.handleError.bind(this));
-        this.websocketConnection.addEventListener('close', this.handleClose.bind(this));
-        this.websocketConnection.addEventListener('message', this.handleMessage.bind(this));
-        return (code?: number, reason?: string) => {
-            this.websocketConnection.close(code, reason);
-            this.websocketConnection.removeEventListener('open', this.handleOpen);
-            this.websocketConnection.removeEventListener('error', this.handleError);
-            this.websocketConnection.removeEventListener('close', this.handleClose);
-            this.websocketConnection.removeEventListener('message', this.handleMessage);
-        };*/
-
-        const subject = webSocket<{ channel: string; type: ClientMessageDataType, value: any; }>({
+        const params: any = {
             url: this.getURL(),
             openObserver: {
                 next: (event: Event) => {
@@ -117,8 +112,31 @@ export class WebsocketConnection {
                     this.connected = false;
                     this.events.next(new LVCloseEvent(event));
                 }
-            }
-        });
+            },
+            deserializer: (msg: MessageEvent<any>) => {
+                let data;
+
+                if (this.format === 'text') {
+                    data = JSON.parse(msg.data);
+                } else {
+                    data = JSON.parse((new TextDecoder().decode(new Uint8Array(msg.data as ArrayBuffer))));
+                }
+
+                return data;
+            },
+        };
+
+        if (this.format === 'binary') {
+            params.binaryType = 'arraybuffer';
+        }
+
+        const subject = webSocket<any/*{
+            hid?: string;
+            pid?: string;
+            channel: string;
+            type: ClientMessageDataType,
+            value: any;
+        }*/>(params);
 
         return subject.pipe(
             filter(data => this.channels.has(data.channel)),
