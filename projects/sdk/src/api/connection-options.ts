@@ -1,7 +1,7 @@
 export interface WebsocketConnectionOptions {
     host: string;
     path?: string;
-    user_id?: string;
+    userId?: string;
     channels: string[];
     apiKey: string;
     format?: 'text' | 'binary';

@@ -71,8 +71,9 @@ export class WebsocketConnection {
 
         // store client id
         // check if there is a client id specified
-        this.#userId = options?.user_id || '';
+        this.#userId = options?.userId || '';
 
+        // should snapshot be enabled and received upon connection
         this.#snapshot = options.hasOwnProperty('snapshot') ? options.snapshot : true;
 
         // remove duplicates
@@ -187,15 +188,20 @@ export class WebsocketConnection {
     }
 
     channelStream<T = any>(...channels: string[]): Observable<WebsocketMessage<T>> {
+        const cache: any = {};
+
         if (!channels || channels.length === 0) {
-            channels = [];
             this.#channels.forEach((channel) => {
-                channels.push(channel);
+                cache[channel] = true;
+            });
+        } else {
+            channels.forEach(channel => {
+                cache[channel] = true;
             });
         }
 
         return this.dataConnectionStream<T>().pipe(
-            filter(event => channels.includes(event.data.channel)),
+            filter(event => cache.hasOwnProperty(event.data.channel)),
             map(event => event.data),
         );
     }

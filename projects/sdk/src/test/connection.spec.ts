@@ -1,5 +1,6 @@
 import { LVErrorEvent } from 'dist/sdk/public-api';
-import { filter, first } from 'rxjs/operators';
+import { merge } from 'rxjs';
+import { filter, first, take } from 'rxjs/operators';
 import {
     WebsocketMessage,
     ClientMessageDataType,
@@ -213,6 +214,7 @@ describe('WebsocketConnection', () => {
         let channelSize = 0;
 
         connection.channelStream().pipe(
+            filter(msg => msg.channel === 'iss'),
             filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
@@ -238,6 +240,117 @@ describe('WebsocketConnection', () => {
         });
 
         connection.connect();
+    });
+
+    it('can connect to both channels', (done) => {
+        const connection = new WebsocketConnection({
+            host: 'localhost:5555',
+            channels: [ 'iss', 'fxcm' ],
+            apiKey: 'some-api-key',
+        });
+
+        let i = 0;
+
+        connection.channelStream().pipe(
+            filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
+            take(2),
+        ).subscribe(msg => {
+            expect(connection.isConnected()).toBe(true);
+            expect([ 'iss', 'fxcm' ].includes(msg.value.channel_name)).toEqual(true);
+
+            if (++i === 2) {
+                done();
+            }
+        });
+
+        connection.connect();
+    });
+
+    it('can connect to all channels but receive data from 1', (done) => {
+        const connection = new WebsocketConnection({
+            host: 'localhost:5555',
+            channels: [ 'iss', 'fxcm' ],
+            apiKey: 'some-api-key',
+        });
+
+        let i = 0;
+
+        connection.channelStream( 'fxcm' ).pipe(
+            filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
+            take(1),
+        ).subscribe(msg => {
+            expect(connection.isConnected()).toBe(true);
+            expect([ 'fxcm' ].includes(msg.value.channel_name)).toEqual(true);
+
+            if (++i === 1) {
+                done();
+            }
+        });
+
+        connection.connect();
+    });
+
+    it('can connect with a user id', (done) => {
+        const connection = new WebsocketConnection({
+            host: 'localhost:5555',
+            channels: [ 'iss', 'fxcm' ],
+            apiKey: 'some-api-key',
+            userId: 'some-known-user-id',
+        });
+
+        let i = 0;
+
+        connection.channelStream( 'iss', 'fxcm' ).pipe(
+            filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
+            take(2),
+        ).subscribe(msg => {
+            expect(connection.isConnected()).toBe(true);
+            expect([ 'iss', 'fxcm' ].includes(msg.value.channel_name)).toEqual(true);
+            expect(msg.value.user_id).toEqual('some-known-user-id');
+
+            if (++i === 2) {
+                done();
+            }
+        });
+
+        connection.connect();
+    });
+
+    it('can establish multiple connections with same user id', (done) => {
+        const connection1 = new WebsocketConnection({
+            host: 'localhost:5555',
+            channels: [ 'iss', 'fxcm' ],
+            apiKey: 'some-api-key',
+            userId: 'some-known-user-id',
+        });
+
+        const connection2 = new WebsocketConnection({
+            host: 'localhost:5555',
+            channels: [ 'iss', 'fxcm' ],
+            apiKey: 'some-api-key',
+            userId: 'some-known-user-id',
+        });
+
+        let i = 0;
+
+        merge(
+            connection1.channelStream(),
+            connection2.channelStream(),
+        ).pipe(
+            filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
+        ).subscribe(msg => {
+            expect(connection1.isConnected()).toBe(true);
+            expect(connection2.isConnected()).toBe(true);
+            expect([ 'iss', 'fxcm' ].includes(msg.value.channel_name)).toEqual(true);
+            expect(msg.value.user_id).toEqual('some-known-user-id');
+
+            if (++i === 4) {
+                done();
+            }
+        });
+
+        connection1.connect();
+        connection2.connect();
     });
 
 });
