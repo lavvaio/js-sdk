@@ -1,3 +1,4 @@
+import { LVErrorEvent } from 'dist/sdk/public-api';
 import { filter, first } from 'rxjs/operators';
 import {
     WebsocketMessage,
@@ -15,13 +16,11 @@ describe('WebsocketConnection', () => {
             host: 'ws://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVOpenEvent>(LVOpenEvent.TYPE).pipe(
+        connection.openConnectionStream().pipe(
             first(),
-        ).subscribe(msg => {
+        ).subscribe(_ => {
             expect(connection.isConnected()).toBe(true);
             done();
         });
@@ -34,13 +33,11 @@ describe('WebsocketConnection', () => {
             host: 'localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVOpenEvent>(LVOpenEvent.TYPE).pipe(
+        connection.openConnectionStream().pipe(
             first(),
-        ).subscribe(msg => {
+        ).subscribe(_ => {
             expect(connection.isConnected()).toBe(true);
             done();
         });
@@ -53,13 +50,11 @@ describe('WebsocketConnection', () => {
             host: 'http://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVOpenEvent>(LVOpenEvent.TYPE).pipe(
+        connection.openConnectionStream().pipe(
             first(),
-        ).subscribe(msg => {
+        ).subscribe(_ => {
             expect(connection.isConnected()).toBe(true);
             done();
         });
@@ -67,18 +62,16 @@ describe('WebsocketConnection', () => {
         connection.connect();
     });
 
-    it('initialize connection with https protocol', (done) => {
+    it('initialize connection with http protocol', (done) => {
         const connection = new WebsocketConnection({
             host: 'http://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVOpenEvent>(LVOpenEvent.TYPE).pipe(
+        connection.openConnectionStream().pipe(
             first(),
-        ).subscribe(msg => {
+        ).subscribe(_ => {
             expect(connection.isConnected()).toBe(true);
             done();
         });
@@ -91,13 +84,11 @@ describe('WebsocketConnection', () => {
             host: 'ws://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVOpenEvent>(LVOpenEvent.TYPE).pipe(
+        connection.openConnectionStream().pipe(
             first(),
-        ).subscribe(msg => {
+        ).subscribe(_ => {
             expect(connection.isConnected()).toBe(true);
             done();
         });
@@ -110,14 +101,21 @@ describe('WebsocketConnection', () => {
             host: 'wss://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVOpenEvent>(LVOpenEvent.TYPE).pipe(
-            first(),
-        ).subscribe(msg => {
-            expect(connection.isConnected()).toBe(true);
+        connection.openConnectionStream().subscribe(_ => {
+            expect(connection.isConnected()).toBe(false);
+        });
+
+        connection.closeConnectionStream().subscribe(_ => {
+            expect(connection.isConnected()).toBe(false);
+            done();
+        });
+
+        connection.errorConnectionStream().subscribe(errorEvent => {
+            expect(errorEvent).toBeDefined();
+            expect(errorEvent.data).toBeDefined();
+            expect(connection.isConnected()).toBe(false);
             done();
         });
 
@@ -129,10 +127,9 @@ describe('WebsocketConnection', () => {
             host: 'ws://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
         });
 
-        connection.eventStream<LVMessageEvent<{ value: { format: string; } }>>(LVMessageEvent.TYPE).pipe(
+        connection.dataConnectionStream<{ format: string; }>().pipe(
             first(),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
@@ -148,11 +145,10 @@ describe('WebsocketConnection', () => {
             host: 'ws://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
             format: 'text',
         });
 
-        connection.eventStream<LVMessageEvent<{ value: { format: string; } }>>(LVMessageEvent.TYPE).pipe(
+        connection.dataConnectionStream<{ format: string; }>().pipe(
             first(),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
@@ -168,11 +164,10 @@ describe('WebsocketConnection', () => {
             host: 'ws://localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
             format: 'binary',
         });
 
-        connection.eventStream<LVMessageEvent<{ value: { format: string; } }>>(LVMessageEvent.TYPE).pipe(
+        connection.dataConnectionStream<{ format: string; }>().pipe(
             first(),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
@@ -183,67 +178,59 @@ describe('WebsocketConnection', () => {
         connection.connect();
     });
 
-    it('receive client connected message when connecting to channel', (done) => {
+    it('receive client connected message when connecting to all channels', (done) => {
         const connection = new WebsocketConnection({
             host: 'localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
-        connection.eventStream<LVMessageEvent<{
-            type: number;
-            value: WebsocketMessageClientConnectedData,
-        }>>(LVMessageEvent.TYPE).pipe(
-            filter(msg => msg.data.type === ClientMessageDataType.CLIENT_CONNECTED),
+        connection.channelStream().pipe(
+            filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
-            expect(msg.data.value.client_id).not.toBe('');
-            expect(msg.data.value.client_id).not.toBeNull();
-            expect(msg.data.value.client_id).not.toBeUndefined();
+            expect(msg.value.client_id).not.toBe('');
+            expect(msg.value.client_id).not.toBeNull();
+            expect(msg.value.client_id).not.toBeUndefined();
+            expect(connection.getClientId()).not.toBe('');
+            expect(connection.getClientId()).not.toBeNull();
+            expect(connection.getClientId()).not.toBeUndefined();
+            expect(connection.getClientId()).toEqual(msg.value.client_id);
             done();
         });
 
         connection.connect();
     });
 
-    it('receive snapshot when connecting to channel', (done) => {
+    it('receive snapshot when connecting', (done) => {
         const connection = new WebsocketConnection({
             host: 'localhost:5555',
             channels: [ 'iss' ],
             apiKey: 'some-api-key',
-            secure: false,
-            // format: 'text',
         });
 
         let msgs = 0;
         let channelSize = 0;
 
-        connection.eventStream<LVMessageEvent<{
-            type: number;
-            value: WebsocketMessageClientConnectedData;
-        }>>(LVMessageEvent.TYPE).pipe(
-            filter(msg => msg.data.type === ClientMessageDataType.CLIENT_CONNECTED),
+        connection.channelStream().pipe(
+            filter(msg => msg.type === ClientMessageDataType.CLIENT_CONNECTED),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
-            expect(msg.data.value.channel_name).toBe('iss');
-            channelSize = +msg.data.value.channel_size;
+            expect(msg.value.channel_name).toBe('iss');
+            channelSize = +msg.value.channel_size;
         });
 
-        connection.eventStream<LVMessageEvent<WebsocketMessage<{ iss_position: { latitude: string; longitude: string; } }>>>(
-            LVMessageEvent.TYPE
-        ).pipe(
-            filter(msg => msg.data.type === ClientMessageDataType.DATA),
+        connection.channelStream('iss').pipe(
+            filter(msg => msg.type === ClientMessageDataType.DATA),
         ).subscribe(msg => {
             expect(connection.isConnected()).toBe(true);
             msgs++;
 
-            expect(msg.data.channel).toBe('iss');
-            expect(msg.data.value.iss_position.latitude).toBeDefined();
-            expect(msg.data.value.iss_position.latitude).not.toBe('');
-            expect(msg.data.value.iss_position.longitude).toBeDefined();
-            expect(msg.data.value.iss_position.longitude).not.toBe('');
+            expect(msg.channel).toBe('iss');
+            expect(msg.value.iss_position.latitude).toBeDefined();
+            expect(msg.value.iss_position.latitude).not.toBe('');
+            expect(msg.value.iss_position.longitude).toBeDefined();
+            expect(msg.value.iss_position.longitude).not.toBe('');
 
             if (msgs === channelSize) {
                 done();

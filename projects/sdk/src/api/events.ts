@@ -26,7 +26,7 @@ export class LVOpenEvent extends LVEvent {
 
     static TYPE: LVEventMessageType = 'open';
 
-    constructor( public event: Event ) {
+    constructor( public data: Event ) {
         super();
     }
 
@@ -40,7 +40,7 @@ export class LVCloseEvent extends LVEvent {
 
     static TYPE: LVEventMessageType = 'close';
 
-    constructor( public event: CloseEvent ) {
+    constructor( public data: CloseEvent ) {
         super();
     }
 
@@ -54,7 +54,7 @@ export class LVErrorEvent extends LVEvent {
 
     static TYPE: LVEventMessageType = 'error';
 
-    constructor( public event: ErrorEvent ) {
+    constructor( public data: ErrorEvent ) {
         super();
     }
 
